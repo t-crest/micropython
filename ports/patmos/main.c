@@ -1,56 +1,70 @@
-/*
-#include "py/builtin.h"
-#include "py/compile.h"
-#include "py/gc.h"
-#include "py/mperrno.h"
-*/
-
-//#include <stdint.h>
 //#include <stdio.h>
-//#include <string.h>
 
 #include "py/builtin.h"
 #include "py/compile.h"
 #include "py/mperrno.h"
 #include "mphalport.h"
 
-//#include "py/runtime.h"
 #include "shared/runtime/pyexec.h"
-
-//#include "shared/runtime/stdout_helpers.c"
 
 #if MICROPY_HELPER_REPL
 #include "py/runtime.h"
 #include "py/repl.h"
 #include "shared/runtime/pyexec.h"
 #endif
-// Allocate memory for the MicroPython GC heap.
+
 #if MICROPY_ENABLE_GC
+// Allocate memory for the MicroPython GC heap.
 #include "py/gc.h"
 #include "shared/runtime/gchelper.h"
 //#include "py/stackctrl.h"
 static char heap[8192];
 #endif
 
+#if FPGA
+#include "modpatmos.h"
+#include <machine/exceptions.h>
+#endif
+
 int main(int argc, char **argv) {
-    // Initialise the MicroPython runtime.
+#if FPGA
+	exc_register(0, &ignore);
+        exc_register(17, &excHandler);
+        exc_register(18, &excHandler);
+        exc_register(19, &excHandler);
+        exc_register(20, &excHandler);
+        exc_register(21, &excHandler);
+
+        // unmask interrupts
+        intr_unmask_all();
+        // clear pending flags
+        intr_clear_all_pending();
+        // enable interrupts
+        intr_enable();
+#endif
+
 #if MICROPY_ENABLE_GC
 //    mp_stack_ctrl_init();
     gc_init(heap, heap + sizeof(heap));
 #endif
+
     mp_init();
-//    pyexec_friendly_repl();
 #if MICROPY_MODULE_FROZEN_MPY
+#if FPGA
+    pyexec_frozen_module("py/fpgaTest.py", false);
+#else
     mp_hal_stdout_tx_strn("Running frozen.py:\n", 19);
     pyexec_frozen_module("py/frozen.py", false);
     mp_hal_stdout_tx_strn("Running frozen2.py:\n", 20);
     pyexec_frozen_module("py/frozen2.py", false);
 #endif
-    //printf("%s\n", "Running");
-    // Start a normal REPL; will exit when ctrl-D is entered on a blank line.
+#endif
+
 #if MICROPY_HELPER_REPL
+    // Start a normal REPL; will exit when ctrl-D is entered on a blank line.
     pyexec_friendly_repl();
 #endif
+
     // Deinitialise the runtime.
 #if MICROPY_ENABLE_GC
     gc_sweep_all();
