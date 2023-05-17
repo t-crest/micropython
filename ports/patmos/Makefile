@@ -44,7 +44,7 @@ mpy:
 	$(foreach var, $(wildcard py/*.py), ./$(TOP)/mpy-cross/build/mpy-cross $(var);)
 
 # Frozen bytecode
-$(BUILD)/_frozen_mpy.c: py/frozen.mpy $(BUILD)/genhdr/qstrdefs.generated.h
+$(BUILD)/_frozen_mpy.c: $(BUILD)/genhdr/qstrdefs.generated.h
 	$(ECHO) "MISC freezing bytecode"
 	$(Q)$(TOP)/tools/mpy-tool.py -f -q $(BUILD)/genhdr/qstrdefs.preprocessed.h -mlongint-impl=none $(wildcard py/*.mpy) > $@
 
